@@ -37,6 +37,7 @@ export interface Config {
   verboseConsoleLog: boolean
 }
 
+
 // ===== 🧩 插件配置 =====
 export const Config: Schema<Config> = Schema.intersect([
   // ===== 🎯 默认目标 =====
@@ -44,18 +45,18 @@ export const Config: Schema<Config> = Schema.intersect([
     defaultTargetList: Schema.array(Schema.object({
       platform: Schema.string()
         .default('qq')
-        .description('🎯 目标平台<br><i>命令未传 <code>-p/--platform</code> 时使用；留空则自动回退为 qq。</i>'),
+        .description('🎯 Platform'),
       selfId: Schema.string()
         .default('')
-        .description('🤖 Bot 自身 ID<br><i>留空时按 <code>useFirstBotWhenSelfIdEmpty</code> 决定只用第一个匹配 Bot，或尝试同平台所有 Bot。</i>'),
+        .description('🤖 BotID'),
       channelId: Schema.string()
-        .description('📡 Channel ID<br><i>qq 填群 openid，onebot 填真实群号或 private:QQ号。</i>'),
+        .description('📡 ChannelID'),
       guildId: Schema.string()
         .default('')
-        .description('🏷️ Guild ID<br><i>QQ 官方群通常填群 openid；普通 OneBot 群建议留空。</i>'),
+        .description('🏷️ GuildID'),
       enable: Schema.boolean()
         .default(true)
-        .description('✅ 是否启用'),
+        .description('✅ 启用'),
     })).role('table').default([{
       platform: 'qq',
       selfId: '',
@@ -68,7 +69,7 @@ export const Config: Schema<Config> = Schema.intersect([
       channelId: '1085190201',
       guildId: '',
       enable: false,
-    }]).description('🎯 默认目标列表<br><i>命令未传目标参数时使用第一条启用目标；selfId 留空时按下方 Bot 选择策略处理。</i>'),
+    }]).description('🎯 默认目标列表<br><br><i>命令未传目标参数时使用第一条启用目标；selfId 留空时按下方 Bot 选择策略处理。</i><br><br><b>Platform：</b>命令未传 <code>-p/--platform</code> 时使用；留空则自动回退为 <code>qq</code>。<br><br><b>Bot ID：</b>留空时按 <code>useFirstBotWhenSelfIdEmpty</code> 决定只用第一个匹配 Bot，或尝试同平台所有 Bot。<br><br><b>Channel ID：</b><code>qq</code> 填群 openid，<code>onebot</code> 填真实群号或 <code>private:QQ号</code>。<br><br><b>Guild ID：</b>QQ 官方群通常填群 openid；普通 OneBot 群建议留空。'),
     defaultMessage: Schema.string()
       .role('textarea')
       .default('# 📣 主动消息测试\n\n- ✅ 来源：{{source}}\n- 🧪 类型：QQ Markdown\n- ⏰ 时间：{{time}}\n\n > 如果这里能看到不同大小的文字，本行还变灰色了，说明 Markdown 生效。\n\n > 本插件默认加载ready的时候发送一条主动消息，如果你第一次安装本插件并且不想看到本消息，可以关闭 <b><i>enableStartupSend</i></b> 配置项。')
