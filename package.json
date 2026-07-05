@@ -1,7 +1,7 @@
 {
   "name": "koishi-plugin-test-broadcast",
   "description": "📣 用于快速验证 Koishi 的主动消息发送能力，尤其是 QQ 官方 Bot 平台。支持从插件配置页 WebUI 或指令触发，方便确认 `qq`、`onebot`、`discord` 等适配器是否能按目标频道主动发消息。✨",
-  "version": "0.1.4-beta.2+20260705",
+  "version": "0.1.4-beta.3+20260705",
   "main": "lib/index.js",
   "typings": "lib/index.d.ts",
   "files": [
