@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>QQ 官方 Bot 主动消息发送精简版</title>
+  <style>
+    body{margin:0;background:#f6f7f9;color:#1c2430;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Microsoft YaHei",sans-serif;line-height:1.65}
+    main{max-width:980px;margin:0 auto;padding:28px}
+    header,section{background:#fff;border:1px solid #d8e0ea;border-radius:8px;box-shadow:0 12px 34px rgba(28,36,48,.08);padding:24px;margin:18px 0}
+    h1{font-size:34px;line-height:1.2;margin:0 0 8px;letter-spacing:0}
+    h2{font-size:22px;margin:0 0 14px;letter-spacing:0}
+    h3{font-size:17px;margin:18px 0 8px;letter-spacing:0}
+    p{margin:8px 0}.muted{color:#647184}.warn{border-left:4px solid #b05a00;background:#fff7eb;padding:12px 14px;border-radius:0 8px 8px 0}
+    table{width:100%;border-collapse:collapse;margin:12px 0;border:1px solid #d8e0ea}
+    th,td{padding:10px;border-bottom:1px solid #d8e0ea;text-align:left;vertical-align:top}th{background:#eef4fa}
+    code{font-family:"Cascadia Code",Consolas,monospace;background:#edf2f7;border-radius:5px;padding:.1em .35em}
+    pre{background:#101820;color:#e8eef7;border-radius:8px;padding:14px;overflow:auto}
+    pre code{background:transparent;color:inherit;padding:0;display:block;font-size:13px;line-height:1.55}
+    .grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}.box{background:#f0f4f8;border:1px solid #d8e0ea;border-radius:8px;padding:14px}
+    @media(max-width:760px){main{padding:14px}.grid{grid-template-columns:1fr}h1{font-size:28px}}
+  </style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>QQ 官方 Bot 主动消息发送精简版</h1>
+    <p class="muted">基于 test-broadcast、openclaw-qqbot、koishi-plugin-adapter-qq-crack 源码整理。</p>
+  </header>
+
+  <section>
+    <h2>1. 先分清目标平台</h2>
+    <table>
+      <tr><th>Koishi 平台</th><th>目标</th><th>官方接口</th></tr>
+      <tr><td><code>qq</code></td><td>普通 QQ 群</td><td><code>POST /v2/groups/{group_openid}/messages</code></td></tr>
+      <tr><td><code>qq</code></td><td>C2C 单聊</td><td><code>POST /v2/users/{openid}/messages</code></td></tr>
+      <tr><td><code>qqguild</code></td><td>QQ 频道子频道</td><td><code>POST /channels/{channel_id}/messages</code></td></tr>
+      <tr><td><code>qqguild</code></td><td>QQ 频道私信</td><td><code>POST /dms/{guild_id}/messages</code></td></tr>
+    </table>
+    <p class="warn"><code>group_openid</code> 不是 QQ 群号，<code>openid</code> 不是 QQ 号。OneBot 用真实群号，QQ 官方 Bot 用 openid。</p>
+  </section>
+
+  <section>
+    <h2>2. AccessToken</h2>
+    <pre><code>curl -X POST "https://bots.qq.com/app/getAppAccessToken" ^
+  -H "Content-Type: application/json" ^
+  -d "{\"appId\":\"你的AppID\",\"clientSecret\":\"你的Secret\"}"</code></pre>
+    <pre><code>Authorization: QQBot ACCESS_TOKEN
+Content-Type: application/json</code></pre>
+  </section>
+
+  <section>
+    <h2>3. curl 发送</h2>
+    <div class="grid">
+      <div class="box">
+        <h3>QQ群文本</h3>
+        <pre><code>curl -X POST "https://api.sgroup.qq.com/v2/groups/GROUP_OPENID/messages" ^
+  -H "Authorization: QQBot ACCESS_TOKEN" ^
+  -H "Content-Type: application/json" ^
+  -d "{\"msg_type\":0,\"content\":\"主动群消息测试\"}"</code></pre>
+      </div>
+      <div class="box">
+        <h3>QQ群 Markdown</h3>
+        <pre><code>curl -X POST "https://api.sgroup.qq.com/v2/groups/GROUP_OPENID/messages" ^
+  -H "Authorization: QQBot ACCESS_TOKEN" ^
+  -H "Content-Type: application/json" ^
+  -d "{\"msg_type\":2,\"markdown\":{\"content\":\"# 主动消息测试\"}}"</code></pre>
+      </div>
+    </div>
+    <h3>C2C 单聊</h3>
+    <pre><code>curl -X POST "https://api.sgroup.qq.com/v2/users/USER_OPENID/messages" ^
+  -H "Authorization: QQBot ACCESS_TOKEN" ^
+  -H "Content-Type: application/json" ^
+  -d "{\"msg_type\":0,\"content\":\"主动私聊测试\"}"</code></pre>
+  </section>
+
+  <section>
+    <h2>4. Python 直接调用</h2>
+    <pre><code>import requests
+
+r = requests.post(
+    "https://bots.qq.com/app/getAppAccessToken",
+    json={"appId": "你的AppID", "clientSecret": "你的Secret"},
+    timeout=30,
+)
+token = r.json()["access_token"]
+
+resp = requests.post(
+    "https://api.sgroup.qq.com/v2/groups/GROUP_OPENID/messages",
+    headers={"Authorization": f"QQBot {token}", "Content-Type": "application/json"},
+    json={"msg_type": 0, "content": "主动群消息测试"},
+    timeout=30,
+)
+print(resp.status_code, resp.text)</code></pre>
+  </section>
+
+  <section>
+    <h2>5. Koishi 内写法</h2>
+    <h3>普通群消息</h3>
+    <pre><code>const bot = ctx.bots.find(bot =&gt; bot.platform === 'qq')
+await bot.sendMessage(groupOpenid, '主动群消息测试')</code></pre>
+    <h3>QQ Markdown</h3>
+    <pre><code>import { h } from 'koishi'
+
+const bot = ctx.bots.find(bot =&gt; bot.platform === 'qq')
+await bot.sendMessage(groupOpenid, h('qq:rawmarkdown-without-keyboard', {
+  content: '# 主动消息测试',
+}))</code></pre>
+    <h3>直接调 internal</h3>
+    <pre><code>const bot = ctx.bots.find(bot =&gt; bot.platform === 'qq') as any
+
+await bot.internal.sendMessage(groupOpenid, {
+  msg_type: 2,
+  markdown: { content: '# 主动消息测试' },
+})</code></pre>
+  </section>
+
+  <section>
+    <h2>6. 源码对应关系</h2>
+    <ul>
+      <li><code>openclaw-qqbot/src/api.ts</code>：封装 token、<code>/v2/groups</code>、<code>/v2/users</code>、<code>/channels</code>、<code>/dms</code>。</li>
+      <li><code>koishi-plugin-adapter-qq-crack/src/internal/group.ts</code>：<code>sendMessage</code> 映射到 <code>/v2/groups/{channel.id}/messages</code>。</li>
+      <li><code>test-broadcast/src/qq.ts</code>：Markdown 优先走 <code>h('qq:rawmarkdown-without-keyboard')</code>，失败 fallback 到 <code>internal.sendMessage()</code>。</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>7. 最短结论</h2>
+    <pre><code>await bot.sendMessage(groupOpenid, content)</code></pre>
+    <pre><code>POST https://api.sgroup.qq.com/v2/groups/{group_openid}/messages
+Authorization: QQBot ACCESS_TOKEN</code></pre>
+  </section>
+</main>
+</body>
+</html>

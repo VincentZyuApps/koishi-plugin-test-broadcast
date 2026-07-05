@@ -1,0 +1,578 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>20260629 总结：QQ 官方 Bot 主动消息发送</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f6f7f9;
+      --panel: #ffffff;
+      --panel-soft: #f0f4f8;
+      --text: #1c2430;
+      --muted: #647184;
+      --border: #d8e0ea;
+      --accent: #1677ff;
+      --accent-strong: #0f56bf;
+      --ok: #16803c;
+      --warn: #b05a00;
+      --code-bg: #101820;
+      --code-text: #e8eef7;
+      --shadow: 0 12px 34px rgba(28, 36, 48, 0.08);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", sans-serif;
+      line-height: 1.65;
+    }
+
+    a {
+      color: var(--accent-strong);
+      text-decoration: none;
+    }
+
+    a:hover {
+      text-decoration: underline;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 280px minmax(0, 1fr);
+      gap: 28px;
+      max-width: 1320px;
+      margin: 0 auto;
+      padding: 28px;
+    }
+
+    .toc {
+      position: sticky;
+      top: 20px;
+      align-self: start;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+      padding: 18px;
+      max-height: calc(100vh - 40px);
+      overflow: auto;
+    }
+
+    .toc h2 {
+      margin: 0 0 12px;
+      font-size: 15px;
+      color: var(--muted);
+      letter-spacing: 0;
+    }
+
+    .toc a {
+      display: block;
+      padding: 6px 0;
+      font-size: 14px;
+      color: #344256;
+    }
+
+    main {
+      min-width: 0;
+    }
+
+    .hero {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+      padding: 32px;
+      margin-bottom: 20px;
+    }
+
+    h1 {
+      margin: 0 0 12px;
+      font-size: clamp(28px, 4vw, 44px);
+      line-height: 1.18;
+      letter-spacing: 0;
+    }
+
+    .subtitle {
+      margin: 0;
+      color: var(--muted);
+      font-size: 16px;
+    }
+
+    section {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+      padding: 26px;
+      margin: 20px 0;
+    }
+
+    h2 {
+      margin: 0 0 16px;
+      font-size: 23px;
+      line-height: 1.3;
+      letter-spacing: 0;
+    }
+
+    h3 {
+      margin: 24px 0 10px;
+      font-size: 18px;
+      letter-spacing: 0;
+    }
+
+    p {
+      margin: 10px 0;
+    }
+
+    ul, ol {
+      padding-left: 24px;
+    }
+
+    li {
+      margin: 6px 0;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+      margin: 16px 0;
+    }
+
+    .info {
+      background: var(--panel-soft);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 16px;
+    }
+
+    .info h3 {
+      margin-top: 0;
+    }
+
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      min-height: 26px;
+      padding: 2px 8px;
+      border-radius: 6px;
+      background: #e7f0ff;
+      color: var(--accent-strong);
+      font-size: 13px;
+      font-weight: 650;
+      margin-right: 6px;
+      vertical-align: middle;
+    }
+
+    .tag.ok {
+      background: #e8f7ed;
+      color: var(--ok);
+    }
+
+    .tag.warn {
+      background: #fff2df;
+      color: var(--warn);
+    }
+
+    code {
+      font-family: "Cascadia Code", Consolas, "SFMono-Regular", monospace;
+      font-size: 0.94em;
+      background: #edf2f7;
+      color: #172033;
+      border-radius: 5px;
+      padding: 0.1em 0.35em;
+    }
+
+    pre {
+      margin: 14px 0;
+      padding: 16px;
+      overflow: auto;
+      background: var(--code-bg);
+      color: var(--code-text);
+      border-radius: 8px;
+      border: 1px solid #263241;
+    }
+
+    pre code {
+      display: block;
+      padding: 0;
+      background: transparent;
+      color: inherit;
+      font-size: 13px;
+      line-height: 1.6;
+      white-space: pre;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 16px 0;
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    th, td {
+      padding: 12px;
+      border-bottom: 1px solid var(--border);
+      text-align: left;
+      vertical-align: top;
+    }
+
+    th {
+      background: #eef4fa;
+      font-weight: 700;
+    }
+
+    tr:last-child td {
+      border-bottom: 0;
+    }
+
+    .callout {
+      border-left: 4px solid var(--accent);
+      background: #eef6ff;
+      padding: 14px 16px;
+      border-radius: 0 8px 8px 0;
+      margin: 16px 0;
+    }
+
+    .callout.warn {
+      border-left-color: var(--warn);
+      background: #fff7eb;
+    }
+
+    .small {
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    @media (max-width: 900px) {
+      .layout {
+        grid-template-columns: 1fr;
+        padding: 16px;
+      }
+
+      .toc {
+        position: static;
+        max-height: none;
+      }
+
+      .grid {
+        grid-template-columns: 1fr;
+      }
+
+      .hero, section {
+        padding: 20px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="layout">
+    <aside class="toc" aria-label="目录">
+      <h2>目录</h2>
+      <a href="#summary">核心结论</a>
+      <a href="#source">源码依据</a>
+      <a href="#token">AccessToken</a>
+      <a href="#curl-group">curl 群消息</a>
+      <a href="#curl-c2c">curl C2C</a>
+      <a href="#python">Python 调用</a>
+      <a href="#koishi">Koishi 写法</a>
+      <a href="#guild">QQ 频道</a>
+      <a href="#seq">msg_id / msg_seq</a>
+      <a href="#pitfalls">常见坑</a>
+      <a href="#recommend">推荐落地方式</a>
+    </aside>
+
+    <main>
+      <div class="hero">
+        <h1>20260629 总结：QQ 官方 Bot 主动消息发送</h1>
+        <p class="subtitle">基于 test-broadcast、openclaw-qqbot、koishi、koishi-doc、koishi-plugin-adapter-qq-crack 的本地源码分析。</p>
+      </div>
+
+      <section id="summary">
+        <h2>核心结论</h2>
+        <div class="grid">
+          <div class="info">
+            <h3><span class="tag ok">platform=qq</span>QQ 群 / C2C 单聊</h3>
+            <p>普通 QQ 群和 C2C 私聊走开放平台 v2 接口。</p>
+            <table>
+              <tr><th>目标</th><th>接口</th></tr>
+              <tr><td>QQ群</td><td><code>POST /v2/groups/{group_openid}/messages</code></td></tr>
+              <tr><td>C2C 单聊</td><td><code>POST /v2/users/{openid}/messages</code></td></tr>
+            </table>
+          </div>
+          <div class="info">
+            <h3><span class="tag">platform=qqguild</span>QQ 频道</h3>
+            <p>QQ 频道使用频道接口，不要和普通 QQ 群 openid 混用。</p>
+            <table>
+              <tr><th>目标</th><th>接口</th></tr>
+              <tr><td>子频道</td><td><code>POST /channels/{channel_id}/messages</code></td></tr>
+              <tr><td>频道私信</td><td><code>POST /dms/{guild_id}/messages</code></td></tr>
+            </table>
+          </div>
+        </div>
+        <div class="callout warn">
+          普通 QQ 群主动消息填的是 <code>group_openid</code>，不是传统 QQ 群号。C2C 私聊填的是用户 <code>openid</code>，不是 QQ 号。
+        </div>
+      </section>
+
+      <section id="source">
+        <h2>源码依据</h2>
+        <h3>openclaw-qqbot</h3>
+        <ul>
+          <li><code>src/api.ts</code> 中 <code>TOKEN_URL</code> 指向 <code>https://bots.qq.com/app/getAppAccessToken</code>。</li>
+          <li><code>sendC2CMessage()</code> / <code>sendProactiveC2CMessage()</code> 使用 <code>/v2/users/{openid}/messages</code>。</li>
+          <li><code>sendGroupMessage()</code> / <code>sendProactiveGroupMessage()</code> 使用 <code>/v2/groups/{groupOpenid}/messages</code>。</li>
+          <li><code>apiRequest()</code> 的鉴权头是 <code>Authorization: QQBot ${accessToken}</code>。</li>
+        </ul>
+        <pre><code class="language-ts">function buildProactiveMessageBody(content: string): Record&lt;string, unknown&gt; {
+  if (currentMarkdownSupport) {
+    return { markdown: { content }, msg_type: 2 }
+  } else {
+    return { content, msg_type: 0 }
+  }
+}
+
+export async function sendProactiveC2CMessage(accessToken, openid, content) {
+  const body = buildProactiveMessageBody(content)
+  return sendAndNotify(accessToken, "POST", `/v2/users/${openid}/messages`, body, { text: content })
+}
+
+export async function sendProactiveGroupMessage(accessToken, groupOpenid, content) {
+  const body = buildProactiveMessageBody(content)
+  return apiRequest(accessToken, "POST", `/v2/groups/${groupOpenid}/messages`, body)
+}</code></pre>
+
+        <h3>koishi-plugin-adapter-qq-crack</h3>
+        <p><code>src/internal/group.ts</code> 中 QQ 群 / C2C endpoint 映射：</p>
+        <pre><code class="language-ts">GroupInternal.define(false, {
+  '/v2/groups/{channel.id}/messages': {
+    POST: 'sendMessage',
+  },
+  '/v2/users/{user.id}/messages': {
+    POST: 'sendPrivateMessage',
+  },
+})</code></pre>
+        <p><code>src/message.ts</code> 中发送选择：</p>
+        <pre><code class="language-ts">return this.session.isDirect
+  ? this.bot.internal.sendPrivateMessage(fromPrivateChannelId(this.session.channelId), payload)
+  : this.bot.internal.sendMessage(this.session.channelId, payload)</code></pre>
+
+        <h3>test-broadcast</h3>
+        <p><code>src/qq.ts</code> 里 QQ Markdown 主动消息优先走 Koishi 元素，失败后 fallback 到 <code>internal.sendMessage()</code>。</p>
+        <pre><code class="language-ts">await bot.sendMessage(channelId, h('qq:rawmarkdown-without-keyboard', {
+  content: markdown,
+}))
+
+await internal.sendMessage(channelId, {
+  msg_type: 2,
+  markdown: {
+    content: content || ' ',
+  },
+})</code></pre>
+      </section>
+
+      <section id="token">
+        <h2>AccessToken 获取</h2>
+        <pre><code class="language-bash">curl -X POST "https://bots.qq.com/app/getAppAccessToken" ^
+  -H "Content-Type: application/json" ^
+  -d "{\"appId\":\"你的AppID\",\"clientSecret\":\"你的Secret\"}"</code></pre>
+        <p>返回后取 <code>access_token</code>。后续请求统一使用：</p>
+        <pre><code class="language-http">Authorization: QQBot ACCESS_TOKEN
+Content-Type: application/json</code></pre>
+      </section>
+
+      <section id="curl-group">
+        <h2>curl：主动发送 QQ 群消息</h2>
+        <h3>文本消息</h3>
+        <pre><code class="language-bash">curl -X POST "https://api.sgroup.qq.com/v2/groups/GROUP_OPENID/messages" ^
+  -H "Authorization: QQBot ACCESS_TOKEN" ^
+  -H "Content-Type: application/json" ^
+  -d "{\"msg_type\":0,\"content\":\"主动消息测试\"}"</code></pre>
+        <h3>Markdown 消息</h3>
+        <pre><code class="language-bash">curl -X POST "https://api.sgroup.qq.com/v2/groups/GROUP_OPENID/messages" ^
+  -H "Authorization: QQBot ACCESS_TOKEN" ^
+  -H "Content-Type: application/json" ^
+  -d "{\"msg_type\":2,\"markdown\":{\"content\":\"# 主动消息测试\n\n这是一条 Markdown\"}}"</code></pre>
+      </section>
+
+      <section id="curl-c2c">
+        <h2>curl：主动发送 C2C 单聊消息</h2>
+        <h3>文本消息</h3>
+        <pre><code class="language-bash">curl -X POST "https://api.sgroup.qq.com/v2/users/USER_OPENID/messages" ^
+  -H "Authorization: QQBot ACCESS_TOKEN" ^
+  -H "Content-Type: application/json" ^
+  -d "{\"msg_type\":0,\"content\":\"主动私聊测试\"}"</code></pre>
+        <h3>Markdown 消息</h3>
+        <pre><code class="language-bash">curl -X POST "https://api.sgroup.qq.com/v2/users/USER_OPENID/messages" ^
+  -H "Authorization: QQBot ACCESS_TOKEN" ^
+  -H "Content-Type: application/json" ^
+  -d "{\"msg_type\":2,\"markdown\":{\"content\":\"# 主动私聊测试\"}}"</code></pre>
+      </section>
+
+      <section id="python">
+        <h2>Python 直接调用 API</h2>
+        <pre><code class="language-python">import requests
+
+APP_ID = "你的AppID"
+SECRET = "你的Secret"
+
+token_resp = requests.post(
+    "https://bots.qq.com/app/getAppAccessToken",
+    json={"appId": APP_ID, "clientSecret": SECRET},
+    timeout=30,
+)
+token_resp.raise_for_status()
+access_token = token_resp.json()["access_token"]
+
+headers = {
+    "Authorization": f"QQBot {access_token}",
+    "Content-Type": "application/json",
+}
+
+group_openid = "GROUP_OPENID"
+resp = requests.post(
+    f"https://api.sgroup.qq.com/v2/groups/{group_openid}/messages",
+    headers=headers,
+    json={
+        "msg_type": 0,
+        "content": "主动群消息测试",
+    },
+    timeout=30,
+)
+
+print(resp.status_code, resp.text)</code></pre>
+        <p>Markdown 只需要把 body 改成：</p>
+        <pre><code class="language-python">json={
+    "msg_type": 2,
+    "markdown": {
+        "content": "# 主动消息测试\n\nhello",
+    },
+}</code></pre>
+      </section>
+
+      <section id="koishi">
+        <h2>Koishi 内写法</h2>
+        <h3>普通文本主动群发</h3>
+        <pre><code class="language-ts">const bot = ctx.bots.find(bot =&gt; bot.platform === 'qq')
+
+await bot.sendMessage(groupOpenid, '主动群消息测试')</code></pre>
+        <h3>QQ 官方 Markdown 主动群发</h3>
+        <pre><code class="language-ts">import { h } from 'koishi'
+
+const bot = ctx.bots.find(bot =&gt; bot.platform === 'qq')
+
+await bot.sendMessage(groupOpenid, h('qq:rawmarkdown-without-keyboard', {
+  content: '# 主动消息测试\n\nhello',
+}))</code></pre>
+        <h3>直接调用 adapter internal</h3>
+        <pre><code class="language-ts">const bot = ctx.bots.find(bot =&gt; bot.platform === 'qq') as any
+
+await bot.internal.sendMessage(groupOpenid, {
+  msg_type: 0,
+  content: '主动群消息测试',
+})
+
+await bot.internal.sendPrivateMessage(userOpenid, {
+  msg_type: 0,
+  content: '主动私聊测试',
+})</code></pre>
+        <h3>internal Markdown</h3>
+        <pre><code class="language-ts">await bot.internal.sendMessage(groupOpenid, {
+  msg_type: 2,
+  markdown: {
+    content: '# 主动消息测试',
+  },
+})</code></pre>
+      </section>
+
+      <section id="guild">
+        <h2>Koishi 频道平台 qqguild</h2>
+        <pre><code class="language-ts">const bot = ctx.bots.find(bot =&gt; bot.platform === 'qqguild')
+
+await bot.sendMessage(channelId, '频道主动消息测试')</code></pre>
+        <table>
+          <tr><th>场景</th><th>底层接口</th></tr>
+          <tr><td>频道子频道消息</td><td><code>POST /channels/{channel_id}/messages</code></td></tr>
+          <tr><td>频道私信</td><td><code>POST /dms/{guild_id}/messages</code></td></tr>
+        </table>
+      </section>
+
+      <section id="seq">
+        <h2>msg_id / msg_seq 的区别</h2>
+        <p>源码里被动回复会带 <code>msg_id</code>、<code>msg_seq</code>、<code>event_id</code>。这些主要用于回复用户刚发来的消息，或处理平台要求的消息序号。</p>
+        <p>主动消息不一定需要这些字段。<code>openclaw-qqbot</code> 的主动发送只构造下面两种 body。</p>
+        <div class="grid">
+          <div>
+            <h3>文本</h3>
+            <pre><code class="language-json">{
+  "content": "文本",
+  "msg_type": 0
+}</code></pre>
+          </div>
+          <div>
+            <h3>Markdown</h3>
+            <pre><code class="language-json">{
+  "markdown": {
+    "content": "Markdown 内容"
+  },
+  "msg_type": 2
+}</code></pre>
+          </div>
+        </div>
+      </section>
+
+      <section id="pitfalls">
+        <h2>常见坑</h2>
+        <table>
+          <tr><th>问题</th><th>说明</th></tr>
+          <tr>
+            <td><code>group_openid</code> 不是 QQ 群号</td>
+            <td>QQ 官方 Bot 群接口要填群 openid，不能填 OneBot 使用的真实 QQ 群号。</td>
+          </tr>
+          <tr>
+            <td><code>openid</code> 不是 QQ 号</td>
+            <td>C2C 主动私聊要填用户 openid，不能填 QQ 号。</td>
+          </tr>
+          <tr>
+            <td><code>qq</code> 和 <code>qqguild</code> 不要混用</td>
+            <td><code>qq</code> 使用 <code>/v2/groups</code> 和 <code>/v2/users</code>；<code>qqguild</code> 使用 <code>/channels</code> 和 <code>/dms</code>。</td>
+          </tr>
+          <tr>
+            <td>Markdown 权限</td>
+            <td>adapter 支持 Markdown 写法，但最终是否成功仍受 QQ 官方 Bot 权限、审核、灰度能力影响。</td>
+          </tr>
+        </table>
+      </section>
+
+      <section id="recommend">
+        <h2>推荐落地方式</h2>
+        <p>在 Koishi 插件内，优先使用通用发送接口：</p>
+        <pre><code class="language-ts">await bot.sendMessage(groupOpenid, content)</code></pre>
+        <p>如果要发 QQ 官方 Markdown，用：</p>
+        <pre><code class="language-ts">await bot.sendMessage(groupOpenid, h('qq:rawmarkdown-without-keyboard', {
+  content,
+}))</code></pre>
+        <p>如果 Koishi 编码器不满足需求，再 fallback 到：</p>
+        <pre><code class="language-ts">await bot.internal.sendMessage(groupOpenid, {
+  msg_type: 2,
+  markdown: { content },
+})</code></pre>
+        <p>如果完全脱离 Koishi，直接调用官方 API：</p>
+        <pre><code class="language-http">POST /v2/groups/{group_openid}/messages
+Authorization: QQBot ACCESS_TOKEN</code></pre>
+        <p class="small">生成日期：2026-06-29。该 HTML 是同目录 Markdown 文档的易读版。</p>
+      </section>
+    </main>
+  </div>
+</body>
+</html>
